@@ -1,0 +1,21 @@
+
+#pragma once
+
+#include <fstream>
+#include <mutex>
+#include <string>
+
+
+using namespace std;
+
+class Logger
+{
+public:
+    static void init(const string &logFilePath);
+    static void log(const string &message);
+    static void dualSafeLog(const string &message);
+
+private:
+    static ofstream logFile;
+    static mutex logMutex;
+};
