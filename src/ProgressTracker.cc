@@ -272,7 +272,7 @@ void ProgressTracker::startHTTPServer(int port)
     // Run the server on a separate thread, not main block
     thread([port]()
            { 
-printf("[ProgressTracker] HTTP server started on port %d\n", port); 
+printf("\n [ProgressTracker] HTTP server started on port %d\n", port); 
 serverPtr->listen("0.0.0.0", port); })
         .detach();
 }

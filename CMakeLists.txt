@@ -20,7 +20,15 @@ FetchContent_Declare(
     GIT_TAG v3.11.3
 )
 
-FetchContent_MakeAvailable(json)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+
+    # ### Do not use newer versions (v1.15.0 or later) due to linking errors.
+    GIT_TAG v1.16.0
+)
+
+FetchContent_MakeAvailable(json googletest)
 
 # ------------------------- httplib (header-only) -------------------------
 set(HTTPLIB_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/httplib")
@@ -81,3 +89,36 @@ target_include_directories(
     # PRIVATE ${json_BINARY_DIR}/single_include
     PRIVATE ${json_BINARY_DIR}/include
 )
+
+find_package(Threads REQUIRED)
+
+add_executable(
+    job_benchmark
+    src/benchmark_main.cc
+    src/JobDispatcher.cc
+    src/Worker.cc
+    src/Logger.cc
+    src/ProgressTracker.cc
+)
+
+target_link_libraries(job_benchmark Threads::Threads)
+
+# --------------------------- Build test ---------------------------
+enable_testing()
+# add_subdirectory(test)
+
+add_executable(
+    job_dispatcher_test
+    test/test_job_dispatcher.cc
+    test/test_progress_tracker.cc
+    test/test_logger.cc
+    test/test_job.cc
+    test/test_benchmark.cc
+    src/JobDispatcher.cc
+    src/ProgressTracker.cc
+    src/Worker.cc
+    src/Logger.cc
+)
+
+target_link_libraries(job_dispatcher_test gtest gtest_main Threads::Threads)
+target_include_directories(job_dispatcher_test PRIVATE .)

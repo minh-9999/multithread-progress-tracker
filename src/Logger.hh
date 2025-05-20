@@ -5,7 +5,6 @@
 #include <mutex>
 #include <string>
 
-
 using namespace std;
 
 class Logger
