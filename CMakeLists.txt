@@ -23,8 +23,6 @@ FetchContent_Declare(
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-
-    # ### Do not use newer versions (v1.15.0 or later) due to linking errors.
     GIT_TAG v1.16.0
 )
 
@@ -94,11 +92,13 @@ find_package(Threads REQUIRED)
 
 add_executable(
     job_benchmark
+    src/benchmark.cc
     src/benchmark_main.cc
     src/JobDispatcher.cc
     src/Worker.cc
     src/Logger.cc
     src/ProgressTracker.cc
+
 )
 
 target_link_libraries(job_benchmark Threads::Threads)
@@ -118,6 +118,7 @@ add_executable(
     src/ProgressTracker.cc
     src/Worker.cc
     src/Logger.cc
+    src/benchmark.cc
 )
 
 target_link_libraries(job_dispatcher_test gtest gtest_main Threads::Threads)

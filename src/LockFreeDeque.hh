@@ -8,35 +8,36 @@ template <typename T>
 class LockFreeDeque
 {
 private:
-    std::deque<T> deque;
+    // std::deque<T> deques;
     std::mutex mutex;
+    std::deque<std::unique_ptr<T>> deques;
 
 public:
-    void pushBottom(const T &job)
+    void pushBottom(std::unique_ptr<T> &&jobPtr)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        deque.push_back(job);
+        deques.push_back(std::move(jobPtr));
     }
 
-    bool popBottom(T &job)
+    bool popBottom(std::unique_ptr<T> &jobPtr)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        if (deque.empty())
+        if (deques.empty())
             return false;
 
-        job = deque.back();
-        deque.pop_back();
+        jobPtr = std::move(deques.back());
+        deques.pop_back();
         return true;
     }
 
-    bool stealTop(T &job)
+    bool stealTop(std::unique_ptr<T> &jobPtr)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        if (deque.empty())
+        if (deques.empty())
             return false;
 
-        job = deque.front();
-        deque.pop_front();
+        jobPtr = std::move(deques.front());
+        deques.pop_front();
         return true;
     }
 };

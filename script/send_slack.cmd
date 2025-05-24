@@ -13,13 +13,19 @@ if not exist %JSON_FILE% (
     exit /b 1
 )
 
-:: === SET YOUR SLACK WEBHOOK URL HERE ===
-@REM set WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-set WEBHOOK_URL=https://webhook.site/c593ae4c-16d9-4f90-95c0-770828637e99
+:: === GET SLACK WEBHOOK URL FROM ENV VARIABLE ===
+if "%SLACK_WEBHOOK_URL%"=="" (
+    echo Error: SLACK_WEBHOOK_URL environment variable not set
+    exit /b 1
+)
+
+set WEBHOOK_URL=%SLACK_WEBHOOK_URL%
 
 :: Read JSON content into a variable
+set "DATA="
 for /f "usebackq delims=" %%a in (%JSON_FILE%) do (
-    set "DATA=%%a"
+    set "LINE=%%a"
+    call set "DATA=%%DATA%%%%LINE%%"
 )
 
 :: Send message to Slack

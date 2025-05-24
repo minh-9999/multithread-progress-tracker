@@ -1,30 +1,10 @@
 #include <gtest/gtest.h>
-#include "../src/JobDispatcher.hh"
+// #include "../src/JobDispatcher.hh"
+#include "../src/benchmark.hh"
 
-void runBenchmark(int numThreads, int numJobs, int sleepPerJobMs, int &durationMs)
-{
-    JobDispatcher dispatcher(numThreads);
-    atomic<int> done{0};
+#include <iostream>
 
-    for (int i = 0; i < numJobs; ++i)
-    {
-        dispatcher.dispatch(i % numThreads, Job{[&]()
-                                                {
-                                                    this_thread::sleep_for(chrono::milliseconds(sleepPerJobMs));
-                                                    done++;
-                                                }});
-    }
-
-    auto start = chrono::steady_clock::now();
-    while (done.load() < numJobs)
-    {
-        this_thread::sleep_for(chrono::milliseconds(10));
-    }
-    auto end = chrono::steady_clock::now();
-    dispatcher.stop();
-
-    durationMs = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-}
+using namespace std;
 
 TEST(JobDispatcherBenchmark, CompareThreads)
 {

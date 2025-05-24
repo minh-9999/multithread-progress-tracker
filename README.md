@@ -8,6 +8,7 @@ Multi-threaded job progress tracking system (JobDispatcher), supporting:
 - Script support Python & CMD
 - Logging to file and console simultaneously
 
+
 ---
 
 ## 🚀 Build
@@ -38,6 +39,9 @@ Run Slack notification script (if notify_config.json is configured)
 ```
 python script/notify.py
 ```
+
+![Screenshot](https://i.ibb.co/bjds9ws6/multithread-progress-tracker-result.png)
+
 
 ## 🧠 Features
 

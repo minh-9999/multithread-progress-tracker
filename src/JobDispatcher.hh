@@ -4,17 +4,19 @@
 #include "Worker.hh"
 #include "Job.hh"
 
+using namespace std;
+
 class JobDispatcher
 {
 public:
     explicit JobDispatcher(int n);
-    void dispatch(int threadIndex, Job job);
+    void dispatch(int threadIndex, unique_ptr<Job> job);
     void stop();
 
 private:
-    std::vector<std::unique_ptr<LockFreeDeque<Job>>> queues;
-    std::vector<std::unique_ptr<Worker>> workers;
+    vector<unique_ptr<LockFreeDeque<Job>>> queues;
+    vector<unique_ptr<Worker>> workers;
     int numThreads;
 
-    std::vector<LockFreeDeque<Job> *> &getAllQueues();
+    vector<LockFreeDeque<Job> *> &getAllQueues();
 };

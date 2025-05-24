@@ -14,27 +14,26 @@ namespace fs = filesystem;
 
 void notifyResult(int method)
 {
-    string script_dir = "script";
+    fs::path script_dir = "script";
 
     if (method == 1)
     {
-        // Run notify.py without passing args, let the script load itself notify_config.json + job_summary.json
-        string cmd = "cd " + script_dir + " && python notify.py";
-
+        // Run notify.py without passing args, script will load config & summary JSON
+        string cmd = "cd " + script_dir.string() + " && python notify.py";
         int ret = system(cmd.c_str());
+        
         if (ret != 0)
             fprintf(stderr, "Error: notify.py returned %d\n", ret);
     }
-
+    
     else if (method == 2)
     {
-        // Keep calling send_slack.cmd with json file
-        string cmd = "cd " + script_dir + " && send_slack.cmd job_summary.json";
+        string cmd = "cd " + script_dir.string() + " && send_slack.cmd job_summary.json";
         int ret = system(cmd.c_str());
         if (ret != 0)
             fprintf(stderr, "Error: send_slack.cmd returned %d\n", ret);
     }
-
+    
     else
     {
         fprintf(stderr, "Unsupported notify method: %d\n", method);
@@ -100,7 +99,6 @@ int main()
 
             if (latency <= LATENCY_THRESHOLD)
                 break;
-            break;
 
             Logger::dualSafeLog("Job " + to_string(i + 1) + " latency too high (" + to_string(latency) + " ms), retrying...");
             ++retries;
@@ -112,8 +110,9 @@ int main()
     tracker.finish();
 
     // Step 4: Write JSON to file
+    fs::path script_dir = "script";
     string json = tracker.exportSummaryJSON();
-    fs::path output_path = fs::path("script") / "job_summary.json";
+    fs::path output_path = script_dir / "job_summary.json";
     ofstream out(output_path);
     out << json;
     out.close();

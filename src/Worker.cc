@@ -1,14 +1,17 @@
 #include "Worker.hh"
+#include "JobExecutor.hh"
 
-Worker::Worker(LockFreeDeque<Job> &localQueue, std::vector<LockFreeDeque<Job> *> &all)
-    : queue(localQueue), allQueues(all)
+#include <memory>
+
+Worker::Worker(LockFreeDeque<Job> &localQueue, vector<LockFreeDeque<Job> *> &all)
+    : queues(localQueue), allQueues(all)
 {
     start();
 }
 
 void Worker::start()
 {
-    thread = std::thread(&Worker::run, this);
+    threads = thread(&Worker::run, this);
 }
 
 void Worker::stop()
@@ -18,32 +21,34 @@ void Worker::stop()
 
 void Worker::join()
 {
-    if (thread.joinable())
-        thread.join();
+    if (threads.joinable())
+        threads.join();
 }
 
 void Worker::run()
 {
     while (running)
     {
-        Job job;
-        if (queue.popBottom(job) || steal(job))
+        unique_ptr<Job> job;
+        if (queues.popBottom(job) || steal(job))
         {
-            job.execute();
+            JobExecutor::run(std::move(job));
         }
         else
         {
-            std::this_thread::yield();
+            this_thread::yield();
+            this_thread::sleep_for(chrono::milliseconds(10));
         }
     }
 }
 
-bool Worker::steal(Job &job)
+bool Worker::steal(unique_ptr<Job> &job)
 {
     for (auto &q : allQueues)
     {
-        if (q == &queue)
+        if (q == &queues)
             continue;
+
         if (q->stealTop(job))
             return true;
     }

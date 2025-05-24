@@ -7,7 +7,6 @@
 #include <iostream>
 #include <sstream>
 
-
 ofstream Logger::logFile;
 mutex Logger::logMutex;
 
@@ -27,7 +26,6 @@ static string timestamp()
     oss << "[" << put_time(&tm, "%Y-%m-%d %H:%M:%S") << "]";
     return oss.str();
 }
-
 
 void Logger::init(const string &logFilePath)
 {
@@ -58,4 +56,18 @@ void Logger::dualSafeLog(const string &message)
 
     if (logFile.is_open())
         logFile << full << endl;
+}
+
+void Logger::logJSON(const string &event, const string &status, int latency, int attempt)
+{
+    lock_guard<mutex> lock(logMutex);
+    logFile << "{ \"event\": \"" << event << "\", \"status\": \"" << status
+            << "\", \"latency_ms\": " << latency
+            << ", \"attempt\": " << attempt << " }" << endl;
+}
+
+void Logger::flush()
+{
+    scoped_lock lock(logMutex);
+    logFile.flush(); // ensure everything in the buffer is written to disk
 }
