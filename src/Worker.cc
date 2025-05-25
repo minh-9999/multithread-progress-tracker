@@ -32,7 +32,7 @@ void Worker::run()
         unique_ptr<Job> job;
         if (queues.popBottom(job) || steal(job))
         {
-            JobExecutor::run(std::move(job));
+            JobExecutor::execute(*job);
         }
         else
         {
@@ -52,5 +52,6 @@ bool Worker::steal(unique_ptr<Job> &job)
         if (q->stealTop(job))
             return true;
     }
+
     return false;
 }

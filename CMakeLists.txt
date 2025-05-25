@@ -123,3 +123,23 @@ add_executable(
 
 target_link_libraries(job_dispatcher_test gtest gtest_main Threads::Threads)
 target_include_directories(job_dispatcher_test PRIVATE .)
+
+add_executable(
+    worker_test
+    test/test_worker.cc
+    src/Worker.cc
+    src/Logger.cc
+)
+
+target_link_libraries(
+    worker_test
+    gtest
+    gtest_main
+    Threads::Threads
+)
+
+target_include_directories(worker_test PRIVATE .)
+
+# --------------------- add tests   ------------------------
+add_test(NAME WorkerTests COMMAND worker_test)
+add_test(NAME DispatcherTests COMMAND job_dispatcher_test)

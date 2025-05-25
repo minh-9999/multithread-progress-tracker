@@ -26,8 +26,26 @@ cmake --build .
 
 copy script folder to the target folder include execution file
 
+⚠️ Before running, you need to set the SLACK_WEBHOOK_URL environment variable so that the script can send Slack notifications!
+
+### Linux / macOS:
 ```
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXX/XXXX/XXXX"
 ./Multithread-Progress-Tracker
+```
+
+### Windows PowerShell:
+```
+$env:SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXX/XXXX/XXXX"
+.\Multithread-Progress-Tracker.exe
+
+```
+
+### Windows CMD:
+```
+set SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXXX/XXXX/XXXX
+Multithread-Progress-Tracker.exe
+
 ```
 
 Run support script (Windows)
@@ -35,7 +53,7 @@ Run support script (Windows)
 script\send_slack.cmd
 ```
 
-Run Slack notification script (if notify_config.json is configured)
+Run Slack notification script 
 ```
 python script/notify.py
 ```

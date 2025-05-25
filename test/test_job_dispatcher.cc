@@ -2,7 +2,7 @@
 #include "../src/JobDispatcher.hh"
 #include "../src/Logger.hh"
 
-// Helper để kiểm tra nội dung file log
+// Helper to check log file contents
 string readFileContent(const string &filename)
 {
     ifstream file(filename);

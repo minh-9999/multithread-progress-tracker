@@ -18,14 +18,30 @@ void notifyResult(int method)
 
     if (method == 1)
     {
-        // Run notify.py without passing args, script will load config & summary JSON
-        string cmd = "cd " + script_dir.string() + " && python notify.py";
+        char *webhook = nullptr;
+        size_t len = 0;
+        errno_t err = _dupenv_s(&webhook, &len, "SLACK_WEBHOOK_URL");
+
+        if (err != 0 || webhook == nullptr || len == 0)
+        {
+            fprintf(stderr, "[Abort] SLACK_WEBHOOK_URL is not set in environment.\n");
+            if (webhook)
+                free(webhook);
+
+            return;
+        }
+
+        string cmd = "cd " + script_dir.string() + " && set SLACK_WEBHOOK_URL=" +
+                     string(webhook) + " && python notify.py";
+
+        free(webhook);
+
         int ret = system(cmd.c_str());
-        
+
         if (ret != 0)
             fprintf(stderr, "Error: notify.py returned %d\n", ret);
     }
-    
+
     else if (method == 2)
     {
         string cmd = "cd " + script_dir.string() + " && send_slack.cmd job_summary.json";
@@ -33,7 +49,7 @@ void notifyResult(int method)
         if (ret != 0)
             fprintf(stderr, "Error: send_slack.cmd returned %d\n", ret);
     }
-    
+
     else
     {
         fprintf(stderr, "Unsupported notify method: %d\n", method);
@@ -50,9 +66,9 @@ int main()
     int choice = 0;
     while (true)
     {
-        cout << "\n\t Select the form of sending results:\n";
-        cout << " 1. Python script\n";
-        cout << " 2. Slack webhook\n";
+        cout << "\n\t Select the form of sending results: \n";
+        cout << " 1. Python script \n";
+        cout << " 2. Slack webhook \n";
         cout << "\n\t> ";
         cin >> choice;
 
@@ -64,7 +80,7 @@ int main()
         }
         else
         {
-            cout << "\n";
+            // cout << "\n";
             break;
         }
     }

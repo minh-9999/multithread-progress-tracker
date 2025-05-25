@@ -11,6 +11,21 @@ if sys.stdout.encoding is None or sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 
+PLACEHOLDERS = {
+    "webhook_url": "__SLACK_WEBHOOK_URL__",
+    "token": "__SLACK_TOKEN__",
+    "channel_id": "__SLACK_CHANNEL_ID__"
+}
+
+
+def supports_unicode():
+    try:
+        test_str = "✅"
+        test_str.encode(sys.stdout.encoding or "utf-8")
+        return True
+    except Exception:
+        return False
+    
 def send_slack_webhook(data, webhook_url, fancy=True, retries=0):
     total_jobs = data.get("total_jobs", 0)
     completed_jobs = data.get("completed_jobs", 0)
@@ -51,7 +66,9 @@ def send_slack_webhook(data, webhook_url, fancy=True, retries=0):
     for attempt in range(1 + retries):
         try:
             res = requests.post(webhook_url, json=payload, timeout=5)
-            print(f"[Slack Webhook] Attempt {attempt+1} - Status: {res.status_code}", flush=True)
+            # print(f"[Slack Webhook] Attempt {attempt+1} - Status: {res.status_code}", flush=True)
+            print(f"[Slack Webhook] Attempt {attempt+1}/{retries+1} - Status: {res.status_code} - {'Success' if res.status_code == 200 else 'Failed'}", flush=True)
+
             if res.status_code == 200:
                 return True
         except Exception as e:
@@ -83,14 +100,42 @@ def send_slack_file(token, channel, file_path, retries=0):
         time.sleep(1)
     return False
 
+placeholder_webhook = "__SLACK_WEBHOOK_URL__"
+placeholder_token = "__SLACK_TOKEN__"
+placeholder_channel = "__SLACK_CHANNEL_ID__"
 
 def send_script_simulate(file_path):
+    """
+    Simulate sending a Slack/webhook payload by reading and printing a JSON file.
+    Does NOT perform real HTTP request — for debug/mock purposes only.
+    """
+    
+    if not os.path.isfile(file_path):
+        print(f"[Error] File not found: {file_path}", flush=True)
+        return
+
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            print("[Simulated Sending]:", flush=True)
-            print(json.dumps(json.load(f), indent=2, ensure_ascii=False), flush=True)
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+
+        if not content:
+            raise ValueError("File is empty.")
+
+        data = json.loads(content)
+        
+        # Simulate sending request
+        print("\n\t [Simulate] Pretend sending POST request to SLACK_WEBHOOK_URL", flush=True)
+        print("[Payload]", flush=True)
+        print(json.dumps(data, indent=2, ensure_ascii=False), flush=True)
+        print("\n\t [Simulate] ✅ Request sent (fake)", flush=True)
+
+    except json.JSONDecodeError as e:
+        print("[Error] JSON decode failed:", e, flush=True)
+
     except Exception as e:
-        print("Simulated sending failed:", e, flush=True)
+        print("[Error] Failed to read file:", e, flush=True)
+
+
 
 
 def load_config():
@@ -105,13 +150,11 @@ def load_config():
         except Exception as e:
             print("[Config] Failed to parse notify_config.json:", e, flush=True)
 
-    placeholder_webhook = "__SLACK_WEBHOOK_URL__"
-    placeholder_token = "__SLACK_TOKEN__"
-    placeholder_channel = "__SLACK_CHANNEL_ID__"
 
     # Override webhook_url from env if placeholder or empty
-    if config.get("webhook_url") in (None, "", placeholder_webhook):
+    if config.get("webhook_url") in (None, "", PLACEHOLDERS["webhook_url"]):
         config["webhook_url"] = os.environ.get("SLACK_WEBHOOK_URL", "")
+
     # Override token
     if config.get("token") in (None, "", placeholder_token):
         config["token"] = os.environ.get("SLACK_TOKEN", "")
@@ -122,6 +165,12 @@ def load_config():
     # Default values
     config["method"] = config.get("method", "script")
     config["fancy"] = config.get("fancy", True)
+    
+    # Auto fallback fancy mode if Unicode not supported
+    if not supports_unicode():
+        print("[Warn] Terminal does not support Unicode emojis. Falling back to plain text.", flush=True)
+        config["fancy"] = False
+        
     config["retry"] = int(config.get("retry", 0))
     config["attach_chart"] = config.get("attach_chart", False)
 
@@ -189,4 +238,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    send_script_simulate("job_summary.json")
+    try:
+        main()
+    except Exception as e:
+        print(f"[Fatal Error] {e}", flush=True)
+        sys.exit(1)

@@ -85,5 +85,5 @@ private:
     Callback callback;
     atomic<int> totalDone {0};
 
-    const std::vector<int> latencyBuckets = {50, 100, 250, 500, 1000};
+    const vector<int> latencyBuckets = {50, 100, 250, 500, 1000};
 };
