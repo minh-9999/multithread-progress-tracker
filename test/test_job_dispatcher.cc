@@ -13,14 +13,16 @@ string readFileContent(const string &filename)
 
 TEST(JobDispatcherTest, SingleJobExecution)
 {
-    Logger::init("test_log.txt");
+    // Logger::init("test_log.txt");
+    Logger &logger = Logger::instance();
+    logger.start("test_log.txt", true);
 
     atomic<bool> jobExecuted{false};
 
     JobDispatcher dispatcher(1);
 
     auto jobPtr = make_unique<Job>([&]()
-                                        {
+                                   {
     Logger::dualSafeLog("Job executed.");
     jobExecuted.store(true, memory_order_release); });
     dispatcher.dispatch(0, std::move(jobPtr));
@@ -46,7 +48,9 @@ TEST(JobDispatcherTest, SingleJobExecution)
 
 TEST(JobDispatcherTest, MultipleJobExecution)
 {
-    Logger::init("multi_log.txt");
+    // Logger::init("multi_log.txt");
+    Logger &logger = Logger::instance();
+    logger.start("multi_log.txt", true);
 
     atomic<int> counter = 0;
     int jobCount = 10;
@@ -70,7 +74,9 @@ TEST(JobDispatcherTest, MultipleJobExecution)
 
 TEST(JobDispatcherTest, JobStealingWorks)
 {
-    Logger::init("steal_log.txt");
+    // Logger::init("steal_log.txt");
+    Logger &logger = Logger::instance();
+    logger.start("steal_log.txt", true);
 
     atomic<int> thread1Executed{0};
 
@@ -95,4 +101,3 @@ TEST(JobDispatcherTest, JobStealingWorks)
     // If thread #1 has successfully stolen, jobExecuted > 0
     EXPECT_GE(thread1Executed.load(), 1);
 }
-

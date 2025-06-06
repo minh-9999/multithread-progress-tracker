@@ -1,144 +1,96 @@
-#include <cstdlib>
-#include <iostream>
+
 #include <thread>
 #include <random>
 #include <fstream>
 #include <format>
+#include <filesystem>
+#include <iostream>
 
 #include "ProgressTracker.hh"
-#include "Logger.hh"
-
-#include <filesystem>
+#include "config.hh"
 
 namespace fs = filesystem;
 
-void notifyResult(int method)
-{
-    fs::path script_dir = "script";
-
-    if (method == 1)
-    {
-        char *webhook = nullptr;
-        size_t len = 0;
-        errno_t err = _dupenv_s(&webhook, &len, "SLACK_WEBHOOK_URL");
-
-        if (err != 0 || webhook == nullptr || len == 0)
-        {
-            fprintf(stderr, "[Abort] SLACK_WEBHOOK_URL is not set in environment.\n");
-            if (webhook)
-                free(webhook);
-
-            return;
-        }
-
-        string cmd = "cd " + script_dir.string() + " && set SLACK_WEBHOOK_URL=" +
-                     string(webhook) + " && python notify.py";
-
-        free(webhook);
-
-        int ret = system(cmd.c_str());
-
-        if (ret != 0)
-            fprintf(stderr, "Error: notify.py returned %d\n", ret);
-    }
-
-    else if (method == 2)
-    {
-        string cmd = "cd " + script_dir.string() + " && send_slack.cmd job_summary.json";
-        int ret = system(cmd.c_str());
-        if (ret != 0)
-            fprintf(stderr, "Error: send_slack.cmd returned %d\n", ret);
-    }
-
-    else
-    {
-        fprintf(stderr, "Unsupported notify method: %d\n", method);
-    }
-}
+mutex io_mutex;
 
 int main()
 {
-    // Step 1: Init the logger first
-    Logger::init("job_log.txt");
-    Logger::dualSafeLog("==== Job Dispatcher Started ===");
+    // Start measuring the total running time of the entire program
+    auto overallStart = chrono::steady_clock::now();
 
-    // Step 2: User chooses how to send results
-    int choice = 0;
-    while (true)
-    {
-        cout << "\n\t Select the form of sending results: \n";
-        cout << " 1. Python script \n";
-        cout << " 2. Slack webhook \n";
-        cout << "\n\t> ";
-        cin >> choice;
+    // ======== Step 1: Initialize the logging system ========
+    // Logger::init("job_log.txt");
 
-        if (cin.fail() || choice < 1 || choice > 2)
-        {
-            cin.clear();
-            cin.ignore(1000, '\n');
-            cout << "\n Invalid choice. Please enter 1 or 2.\n";
-        }
-        else
-        {
-            // cout << "\n";
-            break;
-        }
-    }
+    // Get the current timestamp to name the log file
+    auto timestamp = format("{:%Y%m%d_%H%M%S}", chrono::system_clock::now());
 
-    // Step 3: Setup tracker
-    const int totalJobs = 20;
+    // Get the singleton instance of Logger
+    Logger &log = Logger::instance();
+    // Start a separate thread to handle background logging
+    thread loggerThread(&Logger::logWorker, &log);
+
+    // Initialize log file with name and timestamp attached
+    log.start("job_log_" + timestamp + ".txt");
+    // Record program startup log
+    log.dualSafeLog("==== Job Dispatcher Started ===");
+
+    // ======== Step 2: User chooses method to receive results ========
+    int choice = selectNotificationMethod();
+
+    // ======== Step 3: Initialize progress monitoring ========
+    const int totalJobs = 20; // Total number of jobs to execute
     ProgressTracker tracker(totalJobs);
 
-    // Start HTTP metrics server on port 8080
-    tracker.startHTTPServer(8080);
+    // Start an HTTP server on port 8080 to output monitoring information (Prometheus/Grafana, etc.)
+    setupTracker(tracker);
 
-    tracker.setEnableColor(true);
-    tracker.setHighlightLatency(250); // ms
-    tracker.setLogInterval(3);        // log every 3 jobs
-
+    // Configure maximum retries and latency threshold for each job
     const int MAX_RETRIES = 3;
     const int LATENCY_THRESHOLD = 300;
 
+    // Initialize RNG (Random Number Generator) to simulate job latency
     random_device rd;
     mt19937 rng(rd());
     uniform_int_distribution<int> dist(50, 400);
 
-    for (int i = 0; i < totalJobs; ++i)
-    {
-        int retries = 0;
-        int latency = 0;
-
-        while (retries < MAX_RETRIES)
-        {
-            latency = dist(rng);
-            this_thread::sleep_for(chrono::milliseconds(latency));
-
-            if (latency <= LATENCY_THRESHOLD)
-                break;
-
-            Logger::dualSafeLog("Job " + to_string(i + 1) + " latency too high (" + to_string(latency) + " ms), retrying...");
-            ++retries;
-        }
-
-        tracker.markJobDone(latency);
-    }
-
+    // Call the function to execute the main tasks (using thread pool or async)
+    auto task = runMainTasks(tracker, log, totalJobs, MAX_RETRIES, LATENCY_THRESHOLD);
+    task.wait();
     tracker.finish();
 
-    // Step 4: Write JSON to file
+    // Print progress summary by completion level
+    tracker.printLevelSummary();
+    runThreadPoolTasks(log);
+
+    // ======== Step 4: Write the results to JSON file ========
     fs::path script_dir = "script";
-    string json = tracker.exportSummaryJSON();
     fs::path output_path = script_dir / "job_summary.json";
+    json result = tracker.exportSummaryJSON();
+    cout << result.dump(4); // Print to screen
     ofstream out(output_path);
-    out << json;
+    out << result.dump(4); // Write to file
+    // cout << "\n\n [Debug] JSON written to: " << fs::absolute(output_path) << endl;
+    out.flush(); // Make sure all content is written
     out.close();
 
+    // Get the program end timestamp
     auto end = chrono::system_clock::now();
-    Logger::dualSafeLog("=== Job finished at " + format("{:%Y-%m-%d %H:%M:%S}", end));
-    Logger::dualSafeLog("Summary exported to job_summary.json");
-    Logger::dualSafeLog("Total jobs: " + to_string(totalJobs));
-    Logger::dualSafeLog("Latency threshold: " + to_string(LATENCY_THRESHOLD) + " ms");
 
-    // Step 5: Send notification
-    notifyResult(choice);
+    // Log the end and summary information
+    log.dualSafeLog("\n === Job finished at " + format("{:%Y-%m-%d %H:%M:%S}", end) + "\n");
+    log.dualSafeLog("Summary exported to job_summary.json");
+    log.dualSafeLog("Total jobs: " + to_string(totalJobs));
+    log.dualSafeLog("Latency threshold: " + to_string(LATENCY_THRESHOLD) + " ms");
+
+    // ======== Step 5: Send result notification to user ========
+
+    // Perform post-processing tasks: initialize DB, generate report, clean up temporary files
+    runPostProcessingJobs();
+
+    // Send notification according to user's initial selection
+    sendNotification(choice);
+
+    log.stop();
+    // Wait for the logger thread to finish before exiting the program
+    loggerThread.join();
 }

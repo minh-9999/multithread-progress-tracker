@@ -5,8 +5,9 @@
 
 int main()
 {
-    Logger::init("result/benchmark_log.txt");
-
+    // Logger::init("result/benchmark_log.txt");
+    Logger &logger = Logger::instance();
+    logger.start("result/benchmark_log.txt", true);
     ofstream csv("result/benchmark_result.csv");
     csv << "threads,duration_ms\n";
 

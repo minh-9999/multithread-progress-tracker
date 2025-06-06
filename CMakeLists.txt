@@ -7,6 +7,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(NAME ${PROJECT_NAME})
 
+# Enable debug symbols and ASan sanitizer
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    if(WIN32)
+        message(WARNING "ASan on Windows with Clang is unstable. Disabled.")
+    else()
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined,thread -fno-omit-frame-pointer -g -O0 -fexceptions -D_GLIBCXX_ASSERTIONS -D_HAS_EXCEPTIONS=1 -pthread")
+
+        set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address -pthread")
+    endif()
+
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    message(WARNING "ASan with MSVC is experimental. Disabled.")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /D_HAS_EXCEPTIONS=1 /MDd")
+
+endif()
+
+message(STATUS "Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
+
+
 
 
 # --------------------------- Add third party ---------------------------
@@ -48,12 +67,17 @@ endif()
 
 set(RESOURCE_FILE "${CMAKE_SOURCE_DIR}/resource/icon.rc")
 
-set(SOURCES
+set(
+    SOURCES
     src/main.cc
     src/Logger.cc
     src/ProgressTracker.cc
     src/JobDispatcher.cc
     src/Worker.cc
+    src/JobFactory.cc
+    src/thread_pool.cc
+    src/WorkStealing.cc
+    src/config.cc
 )
 
 

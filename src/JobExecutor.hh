@@ -1,15 +1,10 @@
 #pragma once
 
 #include "Job.hh"
-#include "JobResult.hh"
 #include "Logger.hh"
 
-#include <chrono>
 #include <thread>
 #include <future>
-
-using namespace std;
-using namespace chrono;
 
 class JobExecutor
 {

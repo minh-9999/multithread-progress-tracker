@@ -12,15 +12,16 @@ TEST(ProgressTrackerTest, MarkJobDoneAndFinish)
 
     for (int i = 0; i < totalJobs; ++i)
     {
-        tracker.markJobDone(50 + i * 10); // latency gradually increases
+        tracker.markJobDone(50 + i * 10, LogLevel::Info); // latency gradually increases
     }
 
     tracker.finish();
-
     string json = tracker.exportSummaryJSON();
-    EXPECT_NE(json.find("\"total_jobs\""), string::npos);
-    EXPECT_NE(json.find("\"completed_jobs\""), string::npos);
+
+    EXPECT_NE(json.find("\"total_jobs\": 6"), string::npos);
+    EXPECT_NE(json.find("\"completed_jobs\": 6"), string::npos);
     EXPECT_NE(json.find("\"average_latency_ms\""), string::npos);
+    EXPECT_NE(json.find("\"warn\""), string::npos);
 }
 
 TEST(ProgressTrackerTest, MarkJobDoneWithCategory)
@@ -32,12 +33,12 @@ TEST(ProgressTrackerTest, MarkJobDoneWithCategory)
     tracker.setLogInterval(2);
 
     // Simulate 3 job groups
-    tracker.markJobDoneWithCategory("IO", 50);
-    tracker.markJobDoneWithCategory("IO", 70);
-    tracker.markJobDoneWithCategory("CPU", 150);
-    tracker.markJobDoneWithCategory("CPU", 200);
-    tracker.markJobDoneWithCategory("NET", 90);
-    tracker.markJobDoneWithCategory("NET", 120);
+    tracker.markJobDoneWithCategory("IO", 50, LogLevel::Info);
+    tracker.markJobDoneWithCategory("IO", 70, LogLevel::Info);
+    tracker.markJobDoneWithCategory("CPU", 150, LogLevel::Warn);
+    tracker.markJobDoneWithCategory("CPU", 200, LogLevel::Error);
+    tracker.markJobDoneWithCategory("NET", 90, LogLevel::Info);
+    tracker.markJobDoneWithCategory("NET", 120, LogLevel::Warn);
 
     string json = tracker.exportJSON();
 

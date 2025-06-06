@@ -4,8 +4,6 @@
 #include "Worker.hh"
 #include "Job.hh"
 
-using namespace std;
-
 class JobDispatcher
 {
 public:
@@ -14,8 +12,11 @@ public:
     void stop();
 
 private:
+    // Job queue list, each thread (worker) has its own queue
     vector<unique_ptr<LockFreeDeque<Job>>> queues;
+    // List of workers (threads that process work)
     vector<unique_ptr<Worker>> workers;
+    // Number of workers (and corresponding queues)
     int numThreads;
 
     vector<LockFreeDeque<Job> *> &getAllQueues();
