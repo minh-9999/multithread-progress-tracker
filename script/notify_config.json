@@ -1,0 +1,10 @@
+{
+    "method": "slack",
+    "webhook_url": "__SLACK_WEBHOOK_URL__",
+    "token": "xoxb-XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "channel_id": "C01234567",
+    "retry": 3,
+    "fancy": true,
+    "fallback": true,
+    "attach_chart": true
+}

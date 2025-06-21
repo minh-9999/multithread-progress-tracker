@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Job Report</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 2em;
+        background: #f9f9f9;
+      }
+
+      h2 {
+        color: #2c3e50;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 1em;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+      }
+
+      th {
+        background: #2c3e50;
+        color: white;
+      }
+
+      tr:nth-child(even) {
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>Job Dispatcher Summary</h2>
+    <div id="summary"></div>
+    <h3>Level Summary</h3>
+    <div id="levelSummary"></div>
+
+    <script>
+      fetch("job_summary.json")
+        .then((res) => res.json())
+        .then((data) => {
+          // Summary table
+          const summary = data.jobStats;
+          let summaryHTML =
+            "<table><tr><th>Category</th><th>Jobs</th><th>Min</th><th>Max</th><th>Avg</th></tr>";
+          for (const [cat, val] of Object.entries(summary)) {
+            summaryHTML += `<tr><td>${cat}</td><td>${val.count}</td><td>${val.min}</td><td>${val.max}</td><td>${val.avg}</td></tr>`;
+          }
+          summaryHTML += "</table>";
+          document.getElementById("summary").innerHTML = summaryHTML;
+
+          // Level summary table
+          const level = data.levelSummary;
+          let levelHTML =
+            "<table><tr><th>Category</th><th>INFO</th><th>WARN</th><th>ERROR</th></tr>";
+          for (const [cat, levels] of Object.entries(level)) {
+            levelHTML += `<tr><td>${cat}</td><td>${levels.INFO || 0}</td><td>${
+              levels.WARN || 0
+            }</td><td>${levels.ERROR || 0}</td></tr>`;
+          }
+          levelHTML += "</table>";
+          document.getElementById("levelSummary").innerHTML = levelHTML;
+        });
+    </script>
+  </body>
+</html>
