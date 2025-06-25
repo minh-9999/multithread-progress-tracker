@@ -57,7 +57,7 @@ Job createGenerateReportJob()
                   })
         .onComplete([](bool ok, int attempt, long long ms)
                     { 
-                        cout << "\n [REPORT] Generated in " << ms << "ms\n";
+                        // cout << "\n [REPORT] Generated in " << ms << "ms\n";
                         SAFE_COUT("\n [REPORT] Generated in " << ms << "ms\n"); })
         .build();
 }

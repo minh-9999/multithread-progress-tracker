@@ -45,7 +45,13 @@ FetchContent_Declare(
     GIT_TAG v1.16.0
 )
 
-FetchContent_MakeAvailable(json googletest)
+FetchContent_Declare(
+    asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-34-2
+)
+
+FetchContent_MakeAvailable(json googletest asio)
 
 # ------------------------- httplib (header-only) -------------------------
 set(HTTPLIB_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/httplib")
@@ -78,6 +84,7 @@ set(
     src/thread_pool.cc
     src/WorkStealing.cc
     src/config.cc
+    src/task_graph.cc
 )
 
 
@@ -110,6 +117,17 @@ target_include_directories(
 
     # PRIVATE ${json_BINARY_DIR}/single_include
     PRIVATE ${json_BINARY_DIR}/include
+)
+
+# // ASIO is not a compiled library (.lib or .dll), there is no need to link with it.
+# target_link_libraries(
+#     ${NAME}
+#     PRIVATE asio
+# )
+
+target_compile_definitions(
+    ${NAME}
+    PRIVATE ASIO_STANDALONE
 )
 
 find_package(Threads REQUIRED)
@@ -145,7 +163,10 @@ add_executable(
     src/benchmark.cc
 )
 
-target_link_libraries(job_dispatcher_test gtest gtest_main Threads::Threads)
+target_link_libraries(job_dispatcher_test
+    gtest gtest_main
+    Threads::Threads)
+
 target_include_directories(job_dispatcher_test PRIVATE .)
 
 add_executable(

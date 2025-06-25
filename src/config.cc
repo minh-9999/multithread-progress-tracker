@@ -2,6 +2,7 @@
 #include "Job.hh"
 #include "WorkStealing.hh"
 #include "JobFactory.hh"
+#include "adaptive_task_graph.hh"
 
 #include <filesystem>
 #include <future>
@@ -88,7 +89,7 @@ Task<void> runMainTasks(ProgressTracker &tracker, Logger &log, int totalJobs, in
             if (result.first <= latencyThreshold)
                 break;
 
-            log.dualSafeLog("Job " + std::to_string(i + 1) + " latency too high (" + std::to_string(result.first) + " ms), retrying...");
+            log.dualSafeLog("Job " + to_string(i + 1) + " latency too high (" + to_string(result.first) + " ms), retrying...");
             ++retries;
         }
 
@@ -146,12 +147,42 @@ void runPostProcessingJobs()
                             { reportJob.execute(); });
 
     future<void> f3 = async(launch::async, [&]
-                           { cleanupJob.execute(); });
+                            { cleanupJob.execute(); });
 
     // Wait for jobs to finish
     f1.get();
     f2.get();
     f3.get();
+
+    // -----------------------------------------------------------------------------------------
+    AdaptiveTaskGraph graph;
+
+    auto db = make_shared<Task<void>>(wrapAsTask([&]() -> Task<void>
+                                                 {
+    co_await sleepAsync(100ms);
+    createInitDatabaseJob().execute();
+    co_return; }));
+
+    auto report = make_shared<Task<void>>(wrapAsTask([&]() -> Task<void>
+                                                     {
+    co_await sleepAsync(100ms);
+    createGenerateReportJob().execute();
+    co_return; }));
+
+    auto cleanup = make_shared<Task<void>>(wrapAsTask([&]() -> Task<void>
+                                                      {
+    co_await sleepAsync(100ms);
+    createCleanupTempFilesJob().execute();
+    co_return; }));
+
+    report->dependsOn(*db);
+    cleanup->dependsOn(*report);
+
+    graph.addTask(db);
+    graph.addTask(report);
+    graph.addTask(cleanup);
+
+    graph.execute();
 
     auto end = chrono::steady_clock::now();
     // Record the total running time for all sub-jobs
@@ -271,24 +302,24 @@ Task<pair<int, LogLevel>> simulateTaskCoroutine(int id, Logger &logger)
     }
 }
 
-Task<std::pair<int, LogLevel>> simulateTaskAsyncCoroutine(int id, Logger &logger)
+Task<pair<int, LogLevel>> simulateTaskAsyncCoroutine(int id, Logger &logger)
 {
-    static thread_local std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<int> dist(50, 400);
+    static thread_local mt19937 rng(random_device{}());
+    uniform_int_distribution<int> dist(50, 400);
     int latency = dist(rng); // Random delay
 
-    logger.log(LogLevel::Info, "Start job " + std::to_string(id), "processing", latency, id);
+    logger.log(LogLevel::Info, "Start job " + to_string(id), "processing", latency, id);
 
     // Asynchronous stop: the coroutine will pause, not block the thread
-    co_await sleepAsync(std::chrono::milliseconds(latency));
+    co_await sleepAsync(chrono::milliseconds(latency));
 
     LogLevel level = LogLevel::Info;
 
     if (latency > 300)
     {
         level = (id % 3 == 0) ? LogLevel::Error : LogLevel::Warn;
-        std::string msg = (level == LogLevel::Error) ? "timeout" : "slow response";
-        logger.log(level, "Job " + std::to_string(id), msg, latency, 1);
+        string msg = (level == LogLevel::Error) ? "timeout" : "slow response";
+        logger.log(level, "Job " + to_string(id), msg, latency, 1);
     }
 
     co_return {latency, level};
