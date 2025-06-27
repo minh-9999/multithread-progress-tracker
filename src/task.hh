@@ -5,6 +5,7 @@
 #include <optional>
 #include <utility>
 #include <vector>
+#include <condition_variable>
 
 #include "process.hh"
 
