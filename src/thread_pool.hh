@@ -23,7 +23,10 @@ private:
     // Queue jobs
     queue<function<void()>> jobs;
     mutex queue_mutex;
+    mutex completion_mutex;
     condition_variable cv;
+
+    vector<thread::id> completed_jobs; // Keep track of completed threads
 
     // Stop stream flag
     atomic<bool> stop;

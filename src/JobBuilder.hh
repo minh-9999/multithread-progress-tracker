@@ -61,21 +61,21 @@ public:
     }
 
     // Set callback when job starts running
-    JobBuilder &onStart(std::function<void()> callback)
+    JobBuilder &onStart(function<void()> callback)
     {
         job.onStart = std::move(callback);
         return *this;
     }
 
     // Set up a callback when the job encounters an error
-    JobBuilder &onError(std::function<void(const std::string &)> callback)
+    JobBuilder &onError(function<void(const string &)> callback)
     {
         job.onError = std::move(callback);
         return *this;
     }
 
     // Set callback when job times out
-    JobBuilder &onTimeout(std::function<void()> callback)
+    JobBuilder &onTimeout(function<void()> callback)
     {
         job.onTimeout = std::move(callback);
         return *this;

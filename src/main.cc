@@ -7,6 +7,10 @@
 #include <iostream>
 
 #include "ProgressTracker.hh"
+#include "WorkStealing.hh"
+#include "adaptive_task_graph.hh"
+
+
 #include "config.hh"
 
 namespace fs = filesystem;
@@ -54,8 +58,37 @@ int main()
     uniform_int_distribution<int> dist(50, 400);
 
     // Call the function to execute the main tasks (using thread pool or async)
-    auto task = runMainTasks(tracker, log, totalJobs, MAX_RETRIES, LATENCY_THRESHOLD);
-    task.wait();
+    // auto task = runMainTasks(tracker, log, totalJobs, MAX_RETRIES, LATENCY_THRESHOLD);
+    // task.wait();
+
+    AdaptiveTaskGraph graph;
+
+    // Tạo N job task dưới dạng coroutine wrapped trong Task<void>
+    for (int i = 0; i < totalJobs; ++i)
+    {
+        // Wrap từng simulateTask vào Task<void>
+        auto t = std::make_shared<Task<void>>(wrapAsTask([=, &log, &tracker]() -> Task<void>
+                                                         {
+        int retries = 0;
+        pair<int, LogLevel> result;
+
+        while (retries < MAX_RETRIES)
+        {
+            result = co_await simulateTask(i + 1, log);
+            if (result.first <= LATENCY_THRESHOLD)
+                break;
+            log.dualSafeLog("Job " + std::to_string(i + 1) + " latency too high (" + std::to_string(result.first) + " ms), retrying...");
+            ++retries;
+        }
+
+        tracker.markJobDoneWithCategory("main", result.first, result.second);
+        co_return; }));
+
+        graph.addTask(t);
+    }
+
+    // Chạy toàn bộ graph (bên trong dùng thread pool tự điều chỉnh)
+    graph.execute();
     tracker.finish();
 
     // Print progress summary by completion level

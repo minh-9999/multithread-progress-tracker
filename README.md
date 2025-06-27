@@ -58,7 +58,7 @@ Run Slack notification script
 python script/notify.py
 ```
 
-![Screenshot](https://i.ibb.co/bjds9ws6/multithread-progress-tracker-result.png)
+![Screenshot](https://raw.githubusercontent.com/minh-9999/multithread-progress-tracker/refs/heads/dev/docs/Multithread%20Progress%20Tracker%20result.PNG)
 
 
 ## 🧠 Features

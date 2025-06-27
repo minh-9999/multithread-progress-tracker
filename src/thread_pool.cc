@@ -20,7 +20,7 @@ ThreadPool::ThreadPool(size_t numThreads) : stop(false)
                     if (stop && jobs.empty()) 
                         return;
 
-                    task = std::move(jobs.front());//Take the job out of the queue
+                    task = std::move(jobs.front()); // Take the job out of the queue
                     jobs.pop();
                 }
 
@@ -33,10 +33,15 @@ void ThreadPool::enqueue(function<void()> job)
 {
     {
         lock_guard lock(queue_mutex);
-        jobs.emplace(std::move(job)); // 📥 Add new job to queue
+        jobs.emplace([job, this]()
+                     {
+                         job(); // Run coroutine
+                         lock_guard lock(completion_mutex);
+                         completed_jobs.push_back(this_thread::get_id()); // Track completed thread
+                     });
     }
 
-    cv.notify_one(); // 🔔 Wake up a waiting thread (if any)
+    cv.notify_one(); // 🔔 Wake up an idle thread
 }
 
 ThreadPool::~ThreadPool()
